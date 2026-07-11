@@ -5,7 +5,7 @@
 ## 功能特性
 
 - **帖子系统**：技术分享、问题求助、经验交流，支持图片上传、采纳回复
-- **活动管理**：活动创建、展示、报名，支持图片瀑布流展示
+- **活动管理**：活动创建、编辑、上下架、删除，支持封面图与详细图集
 - **成员管理**：用户注册、角色权限控制（管理员/普通用户）
 - **权限控制**：基于角色的访问控制，支持帖子/回复的编辑删除权限
 
@@ -13,8 +13,7 @@
 
 ### 后端
 - **框架**: NestJS 10
-- **数据库**: CloudBase（生产环境）/ SQLite（开发环境）
-- **ORM**: Drizzle ORM（SQLite）
+- **数据库**: 腾讯云 PostgreSQL (CloudBase RDB)，支持 CloudBase 适配层和直连 pg 两种模式
 - **认证**: 基于 nickname + phone 的身份验证
 - **测试**: Jest + Supertest
 
@@ -32,7 +31,7 @@
 tech-club/
 ├── server/                 # 后端代码
 │   ├── common/            # 公共模块（常量、过滤器、接口）
-│   ├── database/          # 数据库适配器（CloudBase/SQLite）
+│   ├── database/          # 数据库适配器（CloudBase RDB / 直连 pg）
 │   ├── modules/           # 业务模块
 │   │   ├── community/     # 社区模块（帖子、回复、成员）
 │   │   └── activities/    # 活动模块
@@ -40,17 +39,14 @@ tech-club/
 │   └── main.ts            # 入口文件
 ├── client/                # 前端代码
 │   ├── src/
-│   │   ├── api/           # API 接口（空文件，实际在 lib/api-service.ts）
-│   │   ├── components/    # UI 组件
+│   │   ├── api/           # API 接口（api-service.ts）
+│   │   ├── components/    # UI 组件（含 shadcn/ui）
 │   │   ├── hooks/         # 自定义 Hooks
-│   │   ├── lib/           # 工具库（API 服务）
 │   │   ├── pages/         # 页面组件
 │   │   └── types/         # 类型定义
 ├── shared/                # 前后端共享类型
-├── test/                  # 测试文件
-│   ├── e2e/               # 端到端测试
-│   └── unit/              # 单元测试
-└── spec/                  # 设计文档
+├── functions/             # 腾讯云 CloudBase 云函数（api / sql-exec）
+└── skills/                # 项目内置 AI 技能说明
 ```
 
 ## 快速开始
@@ -77,8 +73,8 @@ npm run dev
 单独启动：
 
 ```bash
-npm run dev:server  # 后端服务，端口 3000
-npm run dev:client  # 前端服务，端口 5173
+npm run dev:server  # 后端服务，默认端口 3000（可通过 SERVER_PORT 修改）
+npm run dev:client  # 前端服务，默认端口 3001（可通过 VITE_PORT 修改）
 ```
 
 ### 生产构建
@@ -90,8 +86,18 @@ npm run build
 ### 测试
 
 ```bash
-npm test           # 运行所有测试
-npm run test:e2e   # 仅运行端到端测试
+npm test              # 运行所有单元/Jest 测试
+npm run test:e2e      # 仅运行 e2e 测试
+npm run e2e:browser   # 浏览器端到端冒烟（依赖 Playwright）
+```
+
+### 常用脚本
+
+```bash
+npm run admin:create      # 同步默认管理员到数据库（依赖 PG 直连）
+npm run type:check        # 前后端 TypeScript 类型检查
+npm run lint              # 仓库自定义 lint（脚本聚合 ESLint + Stylelint）
+npm run stylelint         # 仅样式检查
 ```
 
 ### 代码检查
@@ -152,27 +158,41 @@ npm run format     # Prettier 格式化
 
 ## 配置说明
 
-项目使用 `.env` 文件进行配置：
+项目使用 `.env` 文件进行配置（**不要提交真实凭据**）。仓库根目录提供 `.env.example` 作为模板，请复制为 `.env` 再填写：
 
-```env
-# CloudBase 配置
-CLOUDBASE_ENV_ID=your-env-id
-CLOUDBASE_SECRET_ID=your-secret-id
-CLOUDBASE_SECRET_KEY=your-secret-key
-
-# 服务器配置
-PORT=3000
+```bash
+cp .env.example .env
 ```
+
+`.env.example` 内含全部变量及中文说明，主要分以下几类：
+
+| 类别 | 关键变量 | 说明 |
+|------|---------|------|
+| 服务器 | `SERVER_HOST` / `SERVER_PORT` | 后端监听地址与端口（默认 `localhost:3000`） |
+| 数据库 | `DATABASE_URL` / `DB_ADAPTER` / `DB_SCHEMA` | 连接串、适配器类型（`pg` 或留空）、schema |
+| CloudBase | `CLOUDBASE_ENV_ID` / `CLOUDBASE_APIKEY` / `CLOUDBASE_TOKEN` | 腾讯云 CloudBase 环境与凭据 |
+| 腾讯云 API | `TENCENTCLOUD_SECRETID` / `TENCENTCLOUD_SECRETKEY` / `TENCENTCLOUD_REGION` | sql-exec 云函数签名用 |
+| 管理员 | `ADMIN_NICKNAME` / `ADMIN_PHONE` | `npm run admin:create` 用 |
+| 上传 | `PUBLIC_UPLOAD_BASE_URL` | 拼接上传文件外链 |
+| 日志 | `LOG_REQUEST_BODY` / `LOG_RESPONSE_BODY` | 开发期打印请求/响应体 |
+| Vite | `VITE_HOST` / `VITE_PORT` / `VITE_API_URL` | 前端 dev server 及后端代理目标 |
+
+> ⚠️ **端口对齐**：本地默认后端 `3000`、Vite `3001`，`VITE_API_URL=http://127.0.0.1:3000`。如果你改了 `SERVER_PORT`，记得同步修改 `.env` 里的 `VITE_API_URL`，否则前端代理会指错地址。
 
 ## 数据库
 
 ### CloudBase（生产环境）
 
-项目默认使用腾讯云 CloudBase 作为生产数据库，支持自动配置。
+项目默认使用腾讯云 CloudBase RDB 作为生产数据库，支持自动配置。
 
-### SQLite（开发/测试环境）
+### 数据库适配器选择
 
-本地开发和测试使用 SQLite 数据库，数据文件位于 `db/example.db`。
+通过 `.env` 中的 `DB_ADAPTER` 切换两种实现：
+
+- **`pg`**：直连 PostgreSQL（推荐本地开发与生产部署），连接地址见 `DATABASE_URL`
+- 留空或其他值：使用腾讯云 CloudBase RDB 适配层（中间层转发，自动处理 schema 路由）
+
+当前部署通过 `cloudbaserc.json` 把 `api` / `sql-exec` 云函数的 `DB_ADAPTER` 强制设为 `pg`。
 
 ## 图片上传
 
