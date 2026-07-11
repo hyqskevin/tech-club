@@ -1,0 +1,32 @@
+{
+  "envId": "$CLOUDBASE_ENV_ID",
+  "functions": [
+    {
+      "name": "api",
+      "config": {
+        "timeout": 15,
+        "envVariables": {
+          "CLOUDBASE_ENV_ID": "$CLOUDBASE_ENV_ID",
+          "DB_ADAPTER": "pg"
+        }
+      },
+      "deploy": {
+        "ignore": ["node_modules", ".git"]
+      }
+    },
+    {
+      "name": "sql-exec",
+      "config": {
+        "timeout": 15,
+        "envVariables": {
+          "CLOUDBASE_ENV_ID": "$CLOUDBASE_ENV_ID",
+          "MY_SECRETID": "$TENCENTCLOUD_SECRETID",
+          "MY_SECRETKEY": "$TENCENTCLOUD_SECRETKEY"
+        }
+      },
+      "deploy": {
+        "ignore": ["node_modules", ".git"]
+      }
+    }
+  ]
+}
