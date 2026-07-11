@@ -2,7 +2,7 @@ import { Module, Global } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { CloudBaseDatabase } from './cloudbase';
 import { CloudBaseRdbAdapter } from './cloudbase-rdb-adapter';
-import { PgDirectAdapter } from './pg-direct-adapter';
+import { CloudBasePgAdapter } from './pg-direct-adapter';
 
 export const DB_ADAPTER = Symbol('DB_ADAPTER');
 
@@ -11,21 +11,21 @@ export const DB_ADAPTER = Symbol('DB_ADAPTER');
   imports: [ConfigModule],
   providers: [
     CloudBaseDatabase,
-    PgDirectAdapter,
+    CloudBasePgAdapter,
     {
       provide: DB_ADAPTER,
-      useFactory: (cbDb: CloudBaseDatabase, pgAdapter: PgDirectAdapter) => {
+      useFactory: (cbDb: CloudBaseDatabase, pgAdapter: CloudBasePgAdapter) => {
         const usePgDirect = process.env.DB_ADAPTER === 'pg';
         if (usePgDirect) {
-          console.log('Using PostgreSQL RDB adapter (tech_hub schema)');
+          console.log(`Using CloudBase ExecutePGSql adapter (schema: ${process.env.DB_SCHEMA || 'tech_hub'})`);
           return pgAdapter;
         }
         console.log('Using CloudBase RDB adapter (public schema)');
         return new CloudBaseRdbAdapter(cbDb);
       },
-      inject: [CloudBaseDatabase, PgDirectAdapter],
+      inject: [CloudBaseDatabase, CloudBasePgAdapter],
     },
   ],
-  exports: [CloudBaseDatabase, PgDirectAdapter, DB_ADAPTER],
+  exports: [CloudBaseDatabase, CloudBasePgAdapter, DB_ADAPTER],
 })
 export class DatabaseModule {}

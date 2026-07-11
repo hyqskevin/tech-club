@@ -13,7 +13,7 @@
 
 ### 后端
 - **框架**: NestJS 10
-- **数据库**: 腾讯云 PostgreSQL (CloudBase RDB)，支持 CloudBase 适配层和直连 pg 两种模式
+- **数据库**: 腾讯云 PostgreSQL (CloudBase RDB)，统一通过 CloudBase 服务端访问
 - **认证**: 基于 nickname + phone 的身份验证
 - **测试**: Jest + Supertest
 
@@ -31,7 +31,7 @@
 tech-club/
 ├── server/                 # 后端代码
 │   ├── common/            # 公共模块（常量、过滤器、接口）
-│   ├── database/          # 数据库适配器（CloudBase RDB / 直连 pg）
+│   ├── database/          # 数据库适配器（CloudBase RDB / CloudBase ExecutePGSql）
 │   ├── modules/           # 业务模块
 │   │   ├── community/     # 社区模块（帖子、回复、成员）
 │   │   └── activities/    # 活动模块
@@ -189,10 +189,10 @@ cp .env.example .env
 
 通过 `.env` 中的 `DB_ADAPTER` 切换两种实现：
 
-- **`pg`**：直连 PostgreSQL（推荐本地开发与生产部署），连接地址见 `DATABASE_URL`，schema 见 `DB_SCHEMA`
-- 留空或其他值：使用腾讯云 CloudBase RDB 适配层（中间层转发，自动处理 schema 路由）
+- **`pg`**：走腾讯云 CloudBase 的 ExecutePGSql（详见 `server/database/pg-direct-adapter.ts`，内部类名 `CloudBasePgAdapter`），schema 由 `DB_SCHEMA` 控制（默认 `tech_hub`）。**注意**：这不是 PostgreSQL 直连，所有 SQL 都经腾讯云网关中转。
+- 留空或其他值：使用腾讯云 CloudBase RDB 适配层（同样经 CloudBase 网关，自动处理 schema 路由）
 
-当前部署通过 `cloudbaserc.json` 把 `api` / `sql-exec` 云函数的 `DB_ADAPTER` 强制设为 `pg`。
+两种模式本质都是"经 CloudBase 网关"，`DATABASE_URL` 当前不会被读取，留作未来直连 PG 时的占位扩展。
 
 ## 图片上传
 

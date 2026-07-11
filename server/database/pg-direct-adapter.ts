@@ -3,13 +3,17 @@ import type { DbAdapter } from './db-adapter';
 import type { DbEntity } from './db-types';
 
 @Injectable()
-export class PgDirectAdapter implements DbAdapter, OnModuleInit, OnModuleDestroy {
-  private schema = 'tech_hub';
+export class CloudBasePgAdapter implements DbAdapter, OnModuleInit, OnModuleDestroy {
+  // 命名说明：本类底层走的是腾讯云 CloudBase 的 ExecutePGSql（HTTP/RPC 中转），
+  // 并不是直连 PostgreSQL。schema 默认遵循线上惯例 tech_hub，可由环境变量 DB_SCHEMA 覆盖。
+  private readonly schema: string;
 
-  constructor() {}
+  constructor() {
+    this.schema = process.env.DB_SCHEMA || 'tech_hub';
+  }
 
   async onModuleInit() {
-    console.log(`PostgreSQL adapter initialized (schema: ${this.schema})`);
+    console.log(`CloudBase PgAdapter initialized (schema: ${this.schema})`);
   }
 
   async onModuleDestroy() {}
