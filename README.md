@@ -189,7 +189,7 @@ cp .env.example .env
 
 通过 `.env` 中的 `DB_ADAPTER` 切换两种实现：
 
-- **`pg`**：直连 PostgreSQL（推荐本地开发与生产部署），连接地址见 `DATABASE_URL`
+- **`pg`**：直连 PostgreSQL（推荐本地开发与生产部署），连接地址见 `DATABASE_URL`，schema 见 `DB_SCHEMA`
 - 留空或其他值：使用腾讯云 CloudBase RDB 适配层（中间层转发，自动处理 schema 路由）
 
 当前部署通过 `cloudbaserc.json` 把 `api` / `sql-exec` 云函数的 `DB_ADAPTER` 强制设为 `pg`。
